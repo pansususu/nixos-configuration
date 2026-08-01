@@ -1,0 +1,295 @@
+// ============================================================================
+// NIRI CONFIGURATION - finix fork (quickshell ilyamiro shell, no noctalia)
+// ============================================================================
+
+prefer-no-csd
+
+hotkey-overlay {
+    skip-at-startup
+}
+
+screenshot-path "~/Pictures/Screenshots/Screenshot from %Y-%m-%d %H-%M-%S.png"
+
+// ============================================================================
+// OUTPUTS
+// ============================================================================
+
+output "eDP-1" {
+    mode "1920x1080@144"
+    position x=0 y=0
+    variable-refresh-rate on-demand=true
+}
+
+// ============================================================================
+// INPUT
+// ============================================================================
+
+input {
+    keyboard {
+        xkb {
+            layout "latam"
+        }
+        repeat-delay 250
+        repeat-rate 50
+    }
+
+    touchpad {
+        tap
+        natural-scroll
+    }
+
+    focus-follows-mouse
+    mod-key "Super"
+    mod-key-nested "Alt"
+}
+
+// ============================================================================
+// LAYOUT & APPEARANCE
+// ============================================================================
+
+layout {
+    gaps 8
+    // Solid fallback; swaybg (via the swww shim) draws the wallpaper above it.
+    background-color "#1e1e2e"
+    center-focused-column "never"
+
+    preset-column-widths {
+        proportion 0.33333
+        proportion 0.5
+        proportion 0.66667
+    }
+
+    default-column-width {
+        proportion 0.5
+    }
+
+    border {
+        on
+        width 2
+        active-color   "#87CEEB"
+        inactive-color "#87CEEB"
+        urgent-color   "#87CEEB"
+    }
+
+    focus-ring {
+        width 0
+        active-gradient from="#555555" to="#99999999" angle=45
+        inactive-color "#1e1e2e"
+    }
+}
+
+cursor {
+    xcursor-theme "oreo_spark_blue_cursors"
+    xcursor-size 32
+}
+
+overview {
+    zoom 0.3
+    backdrop-color "transparent"
+
+    workspace-shadow {
+        softness 40
+        spread 10
+        offset x=0 y=10
+        color "#00000070"
+    }
+}
+
+window-rule {
+    geometry-corner-radius 14
+    clip-to-geometry true
+}
+
+// ============================================================================
+// ANIMATIONS
+// ============================================================================
+
+animations {
+    workspace-switch { spring damping-ratio=0.92 stiffness=800 epsilon=0.0001; }
+    window-open { spring damping-ratio=0.92 stiffness=900 epsilon=0.0001; }
+    window-close { spring damping-ratio=0.95 stiffness=1000 epsilon=0.0001; }
+    horizontal-view-movement { spring damping-ratio=0.90 stiffness=800 epsilon=0.0001; }
+    window-movement { spring damping-ratio=0.96 stiffness=850 epsilon=0.0001; }
+}
+
+// ============================================================================
+// ENVIRONMENT
+// ============================================================================
+
+environment {
+    XDG_CURRENT_DESKTOP "niri"
+    XDG_SESSION_TYPE "wayland"
+    QT_QPA_PLATFORM "wayland"
+    ELECTRON_OZONE_PLATFORM_HINT "auto"
+    GTK_IM_MODULE "simple"
+}
+
+// ============================================================================
+// STARTUP
+// ============================================================================
+
+spawn-at-startup "dbus-update-activation-environment" "--systemd" "WAYLAND_DISPLAY" "XDG_CURRENT_DESKTOP" "XDG_SESSION_TYPE"
+spawn-at-startup "bash" "-c" "systemctl" "--user" "import-environment" "PATH" "XDG_CURRENT_DESKTOP" "XDG_SESSION_TYPE"
+spawn-at-startup "bash" "-c" "wl-paste --watch cliphist store &"
+spawn-at-startup "gsettings" "set" "org.gnome.desktop.interface" "gtk-theme" "Metatron-Cyan"
+spawn-at-startup "dconf" "write" "/org/gnome/desktop/interface/color-scheme" "'prefer-dark'"
+spawn-at-startup "/usr/lib/xdg-desktop-portal-gnome"
+spawn-at-startup "blueman-applet"
+spawn-at-startup "bash" "-c" "systemctl --user enable --now easyeffects"
+spawn-at-startup "playerctld"
+spawn-at-startup "bash" "-c" "$HOME/.config/hypr/scripts/volume_listener.sh"
+
+// Quickshell ilyamiro shell
+spawn-at-startup "bash" "-c" "quickshell -p $HOME/.config/hypr/scripts/quickshell/Shell.qml"
+spawn-at-startup "bash" "-c" "python3 $HOME/.config/hypr/scripts/quickshell/focustime/focus_daemon.py &"
+
+// ============================================================================
+// WINDOW RULES
+// ============================================================================
+
+window-rule {
+    match app-id="nemo"
+    open-floating true
+}
+window-rule {
+    match app-id="org.gnome.Nautilus"
+    open-floating true
+}
+window-rule {
+    match app-id="org.bleachbit.BleachBit"
+    open-floating true
+}
+window-rule {
+    match app-id="org.gnome.Showtime"
+    open-floating true
+}
+window-rule {
+    match app-id="io.github.celluloid_player.Celluloid"
+    open-floating true
+}
+window-rule {
+    match app-id="org.kde.gwenview"
+    open-floating true
+}
+window-rule {
+    match app-id="Rofi"
+    open-floating true
+}
+window-rule {
+    match app-id="xviewer"
+    open-floating true
+}
+window-rule {
+    match app-id="xed"
+    open-floating true
+}
+window-rule {
+    match app-id="Tk"
+    open-floating true
+}
+window-rule {
+    match app-id="psterm"
+    open-floating true
+}
+
+// ============================================================================
+// KEYBINDINGS
+// ============================================================================
+
+binds {
+    // System
+    Mod+Tab repeat=false { toggle-overview; }
+    Mod+Escape allow-inhibiting=false { toggle-keyboard-shortcuts-inhibit; }
+
+    // Windows & focus
+    Mod+Q { close-window; }
+    Mod+C { maximize-column; }
+    Mod+D { fullscreen-window; }
+    Mod+A { toggle-window-floating; }
+    Alt+Tab { focus-column-right; }
+    Alt+Shift+Tab { focus-column-left; }
+    Mod+Left { focus-column-left; }
+    Mod+Right { focus-column-right; }
+    Mod+Up { focus-window-up; }
+    Mod+Down { focus-window-down; }
+    Mod+Shift+Left { move-column-left; }
+    Mod+Shift+Right { move-column-right; }
+    Mod+Shift+Up { move-window-up; }
+    Mod+Shift+Down { move-window-down; }
+
+    // Applications
+    Mod+Return { spawn "alacritty"; }
+    Mod+E { spawn "nautilus"; }
+    Mod+F { spawn "vivaldi"; }
+
+    // Quickshell toggles
+    Mod+M { spawn-sh "bash ~/.config/hypr/scripts/qs_manager.sh toggle monitors"; }
+    Mod+R { spawn-sh "bash ~/.config/hypr/scripts/reload.sh"; }
+    Mod+Space { spawn-sh "bash ~/.config/hypr/scripts/qs_manager.sh toggle applauncher"; }
+    Mod+V { spawn-sh "bash ~/.config/hypr/scripts/qs_manager.sh toggle clipboard"; }
+    Mod+Comma { spawn-sh "bash ~/.config/hypr/scripts/qs_manager.sh toggle settings"; }
+    Mod+Shift+S { spawn-sh "bash ~/.config/hypr/scripts/qs_manager.sh toggle settings"; }
+    Mod+O { spawn-sh "bash ~/.config/hypr/scripts/qs_manager.sh toggle music"; }
+    Mod+B { spawn-sh "bash ~/.config/hypr/scripts/qs_manager.sh toggle battery"; }
+    Mod+W { spawn-sh "bash ~/.config/hypr/scripts/qs_manager.sh toggle wallpaper"; }
+    Mod+S { spawn-sh "bash ~/.config/hypr/scripts/qs_manager.sh toggle calendar"; }
+    Mod+N { spawn-sh "bash ~/.config/hypr/scripts/qs_manager.sh toggle network"; }
+    Mod+Shift+T { spawn-sh "bash ~/.config/hypr/scripts/qs_manager.sh toggle focustime"; }
+    Mod+H { spawn-sh "bash ~/.config/hypr/scripts/qs_manager.sh toggle guide"; }
+
+    // Workspaces (via qs_manager.sh so shell popups close on switch)
+    Mod+1 { spawn-sh "bash ~/.config/hypr/scripts/qs_manager.sh 1"; }
+    Mod+2 { spawn-sh "bash ~/.config/hypr/scripts/qs_manager.sh 2"; }
+    Mod+3 { spawn-sh "bash ~/.config/hypr/scripts/qs_manager.sh 3"; }
+    Mod+4 { spawn-sh "bash ~/.config/hypr/scripts/qs_manager.sh 4"; }
+    Mod+5 { spawn-sh "bash ~/.config/hypr/scripts/qs_manager.sh 5"; }
+    Mod+6 { spawn-sh "bash ~/.config/hypr/scripts/qs_manager.sh 6"; }
+    Mod+7 { spawn-sh "bash ~/.config/hypr/scripts/qs_manager.sh 7"; }
+    Mod+8 { spawn-sh "bash ~/.config/hypr/scripts/qs_manager.sh 8"; }
+    Mod+9 { spawn-sh "bash ~/.config/hypr/scripts/qs_manager.sh 9"; }
+    Mod+0 { spawn-sh "bash ~/.config/hypr/scripts/qs_manager.sh 10"; }
+
+    Mod+Shift+1 { spawn-sh "bash ~/.config/hypr/scripts/qs_manager.sh 1 move"; }
+    Mod+Shift+2 { spawn-sh "bash ~/.config/hypr/scripts/qs_manager.sh 2 move"; }
+    Mod+Shift+3 { spawn-sh "bash ~/.config/hypr/scripts/qs_manager.sh 3 move"; }
+    Mod+Shift+4 { spawn-sh "bash ~/.config/hypr/scripts/qs_manager.sh 4 move"; }
+    Mod+Shift+5 { spawn-sh "bash ~/.config/hypr/scripts/qs_manager.sh 5 move"; }
+    Mod+Shift+6 { spawn-sh "bash ~/.config/hypr/scripts/qs_manager.sh 6 move"; }
+    Mod+Shift+7 { spawn-sh "bash ~/.config/hypr/scripts/qs_manager.sh 7 move"; }
+    Mod+Shift+8 { spawn-sh "bash ~/.config/hypr/scripts/qs_manager.sh 8 move"; }
+    Mod+Shift+9 { spawn-sh "bash ~/.config/hypr/scripts/qs_manager.sh 9 move"; }
+    Mod+Shift+0 { spawn-sh "bash ~/.config/hypr/scripts/qs_manager.sh 10 move"; }
+
+    // Resize (niri-native)
+    Mod+Ctrl+Left { set-column-width -10%; }
+    Mod+Ctrl+Right { set-column-width +10%; }
+    Mod+Ctrl+Up { set-window-height +10%; }
+    Mod+Ctrl+Down { set-window-height -10%; }
+
+    Mod+WheelScrollDown cooldown-ms=150 { focus-workspace-down; }
+    Mod+WheelScrollUp cooldown-ms=150 { focus-workspace-up; }
+
+    // Screenshots (quickshell overlay)
+    Print { spawn-sh "~/.config/hypr/scripts/screenshot.sh"; }
+    Shift+Print { spawn-sh "~/.config/hypr/scripts/screenshot.sh --edit"; }
+    Super+Print { spawn-sh "~/.config/hypr/scripts/screenshot.sh --full"; }
+    Super+Shift+Print { spawn-sh "~/.config/hypr/scripts/screenshot.sh --full --edit"; }
+
+    // Hardware keys
+    Caps_Lock { spawn-sh "swayosd-client --caps-lock"; }
+    XF86MonBrightnessDown { spawn-sh "swayosd-client --brightness lower"; }
+    XF86MonBrightnessUp { spawn-sh "swayosd-client --brightness raise"; }
+    XF86PowerOff { spawn-sh "bash ~/.config/hypr/scripts/lock.sh"; }
+    Mod+L { spawn-sh "bash ~/.config/hypr/scripts/lock.sh"; }
+
+    // Media & audio
+    XF86AudioRaiseVolume { spawn-sh "swayosd-client --output-volume raise"; }
+    XF86AudioLowerVolume { spawn-sh "swayosd-client --output-volume lower"; }
+    XF86AudioMute { spawn-sh "swayosd-client --output-volume mute-toggle"; }
+    XF86MicMute { spawn-sh "swayosd-client --input-volume mute-toggle"; }
+    XF86AudioPlay { spawn-sh "playerctl play-pause"; }
+    XF86AudioPause { spawn-sh "playerctl play-pause"; }
+    XF86AudioNext { spawn-sh "playerctl next"; }
+    XF86AudioPrev { spawn-sh "playerctl previous"; }
+    XF86AudioStop { spawn-sh "playerctl stop"; }
+}
