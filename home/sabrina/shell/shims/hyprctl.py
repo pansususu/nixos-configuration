@@ -76,8 +76,11 @@ def cmd_monitors():
 
     out = []
     for name, m in data.items():
-        modes = m.get("modes", [])
-        cur = modes[m.get("current_mode", 0)] if modes else {}
+        logical = m.get("logical")
+        if logical is None:
+            continue  # disabled output
+        modes = m.get("modes") or []
+        cur = modes[m.get("current_mode") or 0] if modes else {}
         available = [
             "%dx%d@%.2f" % (mo["width"], mo["height"], mo["refresh_rate"] / 1000)
             for mo in modes
@@ -92,13 +95,13 @@ def cmd_monitors():
             "width": cur.get("width", 0),
             "height": cur.get("height", 0),
             "refreshRate": (cur.get("refresh_rate", 0) / 1000) if cur else 0,
-            "x": m["logical"]["x"],
-            "y": m["logical"]["y"],
+            "x": logical["x"],
+            "y": logical["y"],
             "activeWorkspace": {"id": None, "name": None},
             "specialWorkspace": {"id": None, "name": None},
             "reserved": [0, 0, 0, 0],
-            "scale": m["logical"]["scale"],
-            "transform": TRANSFORM_NIRI2HYPR.get(m["logical"]["transform"], 0),
+            "scale": logical["scale"],
+            "transform": TRANSFORM_NIRI2HYPR.get(logical["transform"], 0),
             "focused": name == focused,
             "dpmsStatus": 1,
             "availableModes": available,
@@ -264,9 +267,10 @@ def cmd_dispatch(args, depth=0):
 
     if disp in ("exec", "exec-once"):
         # hyprctl dispatch exec [--] <command...>
+        # niri's spawn-sh takes a single shell command, so rebuild the argv.
         if rest and rest[0] == "--":
             rest = rest[1:]
-        niri("action", "spawn-sh", "--", *rest)
+        niri("action", "spawn-sh", "--", " ".join(rest))
         return 0
 
     if disp == "dispatch":

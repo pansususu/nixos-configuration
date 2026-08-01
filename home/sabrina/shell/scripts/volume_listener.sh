@@ -31,7 +31,7 @@ pactl subscribe | grep --line-buffered "Event 'change' on sink" | while read -r 
     if [[ "$current_vol" != "$last_vol" ]] || [[ "$current_mute" != "$last_mute" ]]; then
         
         # Trigger OSD (without changing volume)
-        swayosd-client --output-volume 0
+        swayosd-client --output-volume "$current_vol"
 
         # Update tracking
         last_vol="$current_vol"

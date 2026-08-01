@@ -63,6 +63,7 @@
 
     pkgs.quickshell
     pkgs.swaybg
+    pkgs.matugen
 
     # Shell dependencies (from the upstream hyprland session)
     pkgs.rofi

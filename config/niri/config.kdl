@@ -129,11 +129,11 @@ environment {
 // ============================================================================
 
 spawn-at-startup "dbus-update-activation-environment" "--systemd" "WAYLAND_DISPLAY" "XDG_CURRENT_DESKTOP" "XDG_SESSION_TYPE"
-spawn-at-startup "bash" "-c" "systemctl" "--user" "import-environment" "PATH" "XDG_CURRENT_DESKTOP" "XDG_SESSION_TYPE"
+spawn-at-startup "systemctl" "--user" "import-environment" "PATH" "XDG_CURRENT_DESKTOP" "XDG_SESSION_TYPE"
 spawn-at-startup "bash" "-c" "wl-paste --watch cliphist store &"
 spawn-at-startup "gsettings" "set" "org.gnome.desktop.interface" "gtk-theme" "Metatron-Cyan"
 spawn-at-startup "dconf" "write" "/org/gnome/desktop/interface/color-scheme" "'prefer-dark'"
-spawn-at-startup "/usr/lib/xdg-desktop-portal-gnome"
+spawn-at-startup "xdg-desktop-portal-gnome"
 spawn-at-startup "blueman-applet"
 spawn-at-startup "bash" "-c" "systemctl --user enable --now easyeffects"
 spawn-at-startup "playerctld"
@@ -261,10 +261,10 @@ binds {
     Mod+Shift+0 { spawn-sh "bash ~/.config/hypr/scripts/qs_manager.sh 10 move"; }
 
     // Resize (niri-native)
-    Mod+Ctrl+Left { set-column-width -10%; }
-    Mod+Ctrl+Right { set-column-width +10%; }
-    Mod+Ctrl+Up { set-window-height +10%; }
-    Mod+Ctrl+Down { set-window-height -10%; }
+    Mod+Ctrl+Left { set-column-width "-10%"; }
+    Mod+Ctrl+Right { set-column-width "+10%"; }
+    Mod+Ctrl+Up { set-window-height "+10%"; }
+    Mod+Ctrl+Down { set-window-height "-10%"; }
 
     Mod+WheelScrollDown cooldown-ms=150 { focus-workspace-down; }
     Mod+WheelScrollUp cooldown-ms=150 { focus-workspace-up; }
@@ -286,7 +286,7 @@ binds {
     XF86AudioRaiseVolume { spawn-sh "swayosd-client --output-volume raise"; }
     XF86AudioLowerVolume { spawn-sh "swayosd-client --output-volume lower"; }
     XF86AudioMute { spawn-sh "swayosd-client --output-volume mute-toggle"; }
-    XF86MicMute { spawn-sh "swayosd-client --input-volume mute-toggle"; }
+    XF86AudioMicMute { spawn-sh "swayosd-client --input-volume mute-toggle"; }
     XF86AudioPlay { spawn-sh "playerctl play-pause"; }
     XF86AudioPause { spawn-sh "playerctl play-pause"; }
     XF86AudioNext { spawn-sh "playerctl next"; }
