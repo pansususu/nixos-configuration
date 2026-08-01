@@ -11,6 +11,15 @@ hotkey-overlay {
 screenshot-path "~/Pictures/Screenshots/Screenshot from %Y-%m-%d %H-%M-%S.png"
 
 // ============================================================================
+// WORKSPACES
+// Fully dynamic workspaces (niri default): empty ones are destroyed when
+// unfocused. Workspace numbers are managed at runtime: Mod+N creates the
+// numbered workspace on first use (next free index + set-workspace-name), so
+// numbers stay absolute even though the CLI only accepts indexes. See
+// qs_manager.sh and the hyprctl shim for the create-on-demand logic.
+// ============================================================================
+
+// ============================================================================
 // OUTPUTS
 // ============================================================================
 

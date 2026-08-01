@@ -7,11 +7,21 @@ source "$(dirname "${BASH_SOURCE[0]}")/caching.sh"
 qs_ensure_cache "workspaces"
 
 # ============================================================================
-# 1. ZOMBIE PREVENTION
-# Kills any older instances of this script. When Quickshell reloads, 
-# it can leave the old listener pipelines running in the background infinitely.
+# 0. SINGLE INSTANCE GUARD
+# TopBar re-creations can spawn two listeners that race on the same JSON.
+# flock is atomic, so it closes the startup race of the pgrep-only check.
 # ============================================================================
-for pid in $(pgrep -f "workspaces.sh"); do
+exec 9> "$QS_RUN_WORKSPACES/workspaces.lock"
+flock -n 9 || exit 0
+
+# ============================================================================
+# 1. ZOMBIE PREVENTION
+# Kills any older instances of this script. When Quickshell reloads,
+# it can leave the old listener pipelines running in the background infinitely.
+# The anchored pattern (script path at the END of the cmdline) ensures the
+# process that launched us (zsh -c wrapper, setsid, etc.) is never matched.
+# ============================================================================
+for pid in $(pgrep -f "workspaces\.sh$"); do
     if [ "$pid" != "$$" ] && [ "$pid" != "$PPID" ]; then
         kill -9 "$pid" 2>/dev/null
     fi
@@ -45,28 +55,35 @@ if ! [[ "$SEQ_END" =~ ^[0-9]+$ ]]; then
 fi
 
 print_workspaces() {
-    # Get raw data with a timeout fallback
-    spaces=$(timeout 2 hyprctl workspaces -j 2>/dev/null)
-    active=$(timeout 2 hyprctl activeworkspace -j 2>/dev/null | jq '.id')
+    # Two direct niri queries (no hyprctl shim: python startup per event was
+    # the workspace-switch lag). niri's workspace JSON has no windows field,
+    # so join the windows list by workspace_id. Workspace "numbers" live in
+    # the name field, falling back to the opaque id for unnamed leftovers.
+    spaces=$(timeout 2 niri msg -j workspaces 2>/dev/null)
+    [ -z "$spaces" ] && return
+    wins=$(timeout 2 niri msg -j windows 2>/dev/null)
+    [ -z "$wins" ] && wins="[]"
 
-    # Failsafe if hyprctl crashes to prevent jq from outputting errors
-    if [ -z "$spaces" ] || [ -z "$active" ]; then return; fi
-
-    # Generate the JSON and write it atomically to prevent UI flickering
-    echo "$spaces" | jq --unbuffered --argjson a "$active" --arg end "$SEQ_END" -c '
-        # Create a map of workspace ID -> workspace data for easy lookup
-        (map( { (.id|tostring): . } ) | add) as $s
-        |
-        # Iterate from 1 to SEQ_END
+    # Generate the JSON and write it in place: a direct write keeps the same
+    # inode, so TopBar's inotifywait on the file keeps firing. (mv would
+    # replace the inode and freeze the indicator until the shell reloads.)
+    echo "$spaces" | jq --unbuffered --argjson wins "$wins" --arg end "$SEQ_END" -c '
+        ($wins | group_by(.workspace_id) | map({key: (.[0].workspace_id|tostring), value: .}) | from_entries) as $byws |
+        (map({ key: (if ((.name // "") | test("^[0-9]+$")) then .name else (.id|tostring) end), value: . }) | from_entries) as $s |
+        (($s | to_entries[] | select(.value.is_active) | .key) // "") as $a |
         [range(1; ($end|tonumber) + 1)] | map(
             . as $i |
+            ($s[($i|tostring)]) as $w |
+            ($byws[($w.id // -1 | tostring)] // []) as $wl |
             # Determine state: active -> occupied -> empty
-            (if $i == $a then "active"
-             elif ($s[$i|tostring] != null and $s[$i|tostring].windows > 0) then "occupied"
+            (if ($i|tostring) == $a then "active"
+             elif ($wl | length) > 0 then "occupied"
              else "empty" end) as $state |
 
-            # Get window title for tooltip (if exists)
-            (if $s[$i|tostring] != null then $s[$i|tostring].lastwindowtitle else "Empty" end) as $win |
+            # Get the title of the last focused window on the workspace
+            (if ($wl | length) > 0 then
+                 ($wl | sort_by(.focus_timestamp.secs, .focus_timestamp.nanos) | last | .title)
+             else "Empty" end) as $win |
 
             {
                 id: $i,
@@ -74,9 +91,7 @@ print_workspaces() {
                 tooltip: $win
             }
         )
-    ' > "$QS_RUN_WORKSPACES/workspaces.tmp"
-    
-    mv "$QS_RUN_WORKSPACES/workspaces.tmp" "$QS_RUN_WORKSPACES/workspaces.json"
+    ' > "$QS_RUN_WORKSPACES/workspaces.json"
 }
 
 # Print initial state
@@ -90,7 +105,7 @@ print_workspaces
 while true; do
     niri msg -j event-stream 2>/dev/null | while read -r line; do
         case "$line" in
-            *WorkspacesChanged*|*WindowsChanged*)
+            *WorkspaceActivated*|*WorkspacesChanged*|*WindowsChanged*)
 
                 # -> THE FIX <-
                 # Hyprland emits HUNDREDS of events a second when you move/resize windows.

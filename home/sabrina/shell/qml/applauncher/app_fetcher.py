@@ -15,7 +15,10 @@ def fetch_apps():
         '/var/lib/flatpak/exports/share/applications',
         f'{home}/.local/share/flatpak/exports/share/applications',
         f'{home}/.nix-profile/share/applications',
-        '/run/current-system/sw/share/applications'
+        '/run/current-system/sw/share/applications',
+        # NixOS home-manager with useUserPackages installs the user profile here
+        f'/etc/profiles/per-user/{os.environ.get("USER", os.path.basename(home))}/share/applications',
+        f'{home}/.local/state/nix/profiles/profile/share/applications'
     ]
     
     for d in dirs:

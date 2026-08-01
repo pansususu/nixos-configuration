@@ -18,9 +18,32 @@ if [[ "$ACTION" =~ ^[0-9]+$ ]]; then
     # Send IPC command directly to Main.qml via Quickshell's native IPC handler
     quickshell -p "$SHELL_QML_PATH" ipc call main handleCommand "close" "" "" >/dev/null 2>&1
 
-    CMD="workspace $ACTION"
-    [[ "$TARGET" == "move" ]] && CMD="movetoworkspace $ACTION"
-    hyprctl --batch "dispatch $CMD" >/dev/null 2>&1
+    N="$ACTION"
+    MOVE=0
+    [[ "$TARGET" == "move" ]] && MOVE=1
+
+    # FAST PATH: niri's CLI only accepts workspace INDEXES, while hyprland
+    # numbers are absolute. Workspace numbers are stored as names, so resolve
+    # the number to its current index here (no python shim = no lag), and
+    # create the workspace with its number when it does not exist yet.
+    WS=$(niri msg -j workspaces 2>/dev/null)
+    IDX=$(printf '%s' "$WS" | jq -r --arg n "$N" '.[] | select(.name==$n) | .idx' 2>/dev/null | head -1)
+
+    if [ -z "$IDX" ]; then
+        # Workspace N does not exist yet: create it at the next free index,
+        # then pin the number as its name so it keeps its number.
+        IDX=$(printf '%s' "$WS" | jq -r '([.[].idx] | max // 0) + 1' 2>/dev/null)
+        niri msg action focus-workspace "$IDX" >/dev/null 2>&1
+        niri msg action set-workspace-name "$N" >/dev/null 2>&1
+        if [ "$MOVE" = "1" ]; then
+            niri msg action move-window-to-workspace "$IDX" >/dev/null 2>&1
+        fi
+    elif [ "$MOVE" = "1" ]; then
+        niri msg action move-window-to-workspace "$IDX" >/dev/null 2>&1
+        niri msg action focus-workspace "$IDX" >/dev/null 2>&1
+    else
+        niri msg action focus-workspace "$IDX" >/dev/null 2>&1
+    fi
     exit 0
 fi
 

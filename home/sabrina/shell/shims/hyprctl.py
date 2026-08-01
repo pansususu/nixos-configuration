@@ -144,6 +144,42 @@ def cmd_activewindow():
     }))
 
 
+def ws_number(w):
+    """niri workspace ids are opaque; the shell expects fixed 1..N numbers.
+    Named workspaces carry the number in `name`, so use that when present."""
+    name = w.get("name") or ""
+    if name.isdigit():
+        return int(name)
+    return w.get("id")
+
+
+def ws_idx_by_name(target):
+    """Resolve a named workspace to its current index on the monitor.
+
+    niri's CLI parses numeric arguments as *indexes*, never as names, so to
+    target the numbered workspace we must look up its current idx ourselves.
+    Returns None when no workspace with that name exists.
+    """
+    try:
+        data = json.loads(niri("workspaces", json_out=True) or "[]")
+    except ValueError:
+        return None
+    for w in data:
+        if w.get("name") == str(target):
+            return w["idx"]
+    return None
+
+
+def next_free_idx():
+    """Next index after the last existing workspace (for dynamic creation)."""
+    try:
+        data = json.loads(niri("workspaces", json_out=True) or "[]")
+    except ValueError:
+        return 1
+    idxs = [w["idx"] for w in data]
+    return (max(idxs) + 1) if idxs else 1
+
+
 def cmd_workspaces():
     ws = json.loads(niri("workspaces", json_out=True) or "[]")
     wins = json.loads(niri("windows", json_out=True) or "[]")
@@ -160,8 +196,8 @@ def cmd_workspaces():
         wl = by_ws.get(w["id"], [])
         last = max(wl, key=ts) if wl else None
         out.append({
-            "id": w["id"],
-            "name": w["name"] or str(w["idx"]),
+            "id": ws_number(w),
+            "name": str(ws_number(w)),
             "monitor": w["output"],
             "monitorID": 0,
             "windows": len(wl),
@@ -181,7 +217,7 @@ def cmd_workspaces():
 def cmd_activeworkspace():
     for w in json.loads(niri("workspaces", json_out=True) or "[]"):
         if w.get("is_active"):
-            print(json.dumps({"id": w["id"], "name": w.get("name"), "monitor": w["output"]}))
+            print(json.dumps({"id": ws_number(w), "name": str(ws_number(w)), "monitor": w["output"]}))
             return
     print("{}")
 
@@ -254,7 +290,7 @@ DISPATCHER_MAP = {
     "togglefloating": None,   # -> toggle-window-floating
     "exit": None,             # -> quit
     "workspace": "focus-workspace",
-    "movetoworkspace": "move-column-to-workspace",
+    "movetoworkspace": "move-window-to-workspace",
 }
 
 
@@ -299,7 +335,24 @@ def cmd_dispatch(args, depth=0):
                 return 1
             niri("action", target[rest[0]])
         else:
-            niri("action", target, *rest)
+            # workspace / movetoworkspace: hyprland numbers are niri names.
+            # The CLI takes indexes, so resolve the number to its current idx;
+            # if the numbered workspace does not exist yet, create it at the
+            # next free index and pin the number as its name (dynamic
+            # workspaces: empty ones get destroyed, names keep numbers stable).
+            if disp in ("workspace", "movetoworkspace") and rest:
+                idx = ws_idx_by_name(rest[0])
+                if idx is None:
+                    idx = next_free_idx()
+                    niri("action", "focus-workspace", str(idx))
+                    niri("action", "set-workspace-name", rest[0])
+                    if disp == "movetoworkspace":
+                        niri("action", "move-window-to-workspace", str(idx))
+                    return 0
+                niri("action", target, str(idx))
+                if disp == "movetoworkspace":
+                    niri("action", "focus-workspace", str(idx))
+                return 0
         return 0
 
     if disp == "resizeactive":
